@@ -1,43 +1,34 @@
-package com.spj.easychat.chat.server.handler;
+package com.spj.easychat.server.handler;
 
-import com.spj.easychat.ChatEventLoop;
-import com.spj.easychat.UserInfoUtil;
-import com.spj.easychat.chat.MessageHandler;
-import com.spj.easychat.common.*;
-import io.netty.channel.Channel;
+import com.spj.easychat.common.entity.CommonMessage;
+import com.spj.easychat.common.entity.HeartMessage;
+import com.spj.easychat.common.entity.Message;
+import com.spj.easychat.common.entity.Status;
+import com.spj.easychat.server.ChatEventLoop;
+import com.spj.easychat.server.DefaultMessageHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
-import java.util.concurrent.ConcurrentHashMap;
-
+@Component
+@Scope(ConfigurableListableBeanFactory.SCOPE_PROTOTYPE)
 public class ServerMessageHandler extends SimpleChannelInboundHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ServerMessageHandler.class);
 
-    // 存储Channel到在线用户的映射
-    private ConcurrentHashMap<Channel,String> onlineUser;
 
-    // 存储用户到Channel的映射
-    private ConcurrentHashMap<String, Channel> userChannel;
-    // 存储用户监听的群组,键是用户,值是群名
-    private ConcurrentHashMap<String,String> groupOfUserListener;
-
-    public ServerMessageHandler(){
-        onlineUser = new ConcurrentHashMap<>();
-        userChannel = new ConcurrentHashMap<>();
-        groupOfUserListener = new ConcurrentHashMap<>();
-    }
-
-    private MessageHandler messageHandler;
-
+    @Autowired
+    private DefaultMessageHandler messageHandler ;
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object o) throws Exception {
-        log.info("收到客户端的消息");
         if (o instanceof Message){
             Object obj =((Message)o).getMsg();
             if (obj instanceof HeartMessage){
@@ -61,7 +52,11 @@ public class ServerMessageHandler extends SimpleChannelInboundHandler {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent){
             IdleStateEvent e = (IdleStateEvent) evt;
-            if (e.state() == IdleState.WRITER_IDLE){
+            if (e.state() == IdleState.READER_IDLE){
+                log.info("有一定的时间没有读取消息了");
+                messageHandler.logout(ctx.channel());
+                //ctx.writeAndFlush(new Message(new HeartMessage(1)));
+            }else if (e.state() == IdleState.WRITER_IDLE){
                 ctx.writeAndFlush(new Message(new HeartMessage(1)));
             }
         }
@@ -69,7 +64,7 @@ public class ServerMessageHandler extends SimpleChannelInboundHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        UserInfoUtil.logout(ctx.channel());
+        messageHandler.logout(ctx.channel());
         //String userName = onlineUser.get(ctx.channel());
         //onlineUser.remove(ctx.channel());
         //userChannel.remove(userName);
@@ -86,9 +81,9 @@ public class ServerMessageHandler extends SimpleChannelInboundHandler {
         }else{
             if (commonMessage.getToUser() != null){
                 log.info("单发消息: {} -> {}",commonMessage.getFromUser(),commonMessage.getToUser());
-                UserInfoUtil.sendMessage(commonMessage.getMsg(),commonMessage.getFromUser(),commonMessage.getToUser());
+                messageHandler.sendMessage(commonMessage);
             }else{
-                UserInfoUtil.broadcast(commonMessage.getMsg(),commonMessage.getFromUser());
+                messageHandler.broadcast(commonMessage);
             }
         }
     }
@@ -102,7 +97,7 @@ public class ServerMessageHandler extends SimpleChannelInboundHandler {
         ChatEventLoop.executor(new Runnable() {
             @Override
             public void run() {
-                UserInfoUtil.login(userInfo[0],userInfo[1],ctx.channel());
+                messageHandler.login(userInfo[0],userInfo[1],ctx.channel());
             }
         });
     }

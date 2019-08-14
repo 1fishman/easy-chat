@@ -1,8 +1,4 @@
-package com.spj.easychat.common;
-
-import com.spj.easychat.chat.MessageHandler;
-
-import java.io.Serializable;
+package com.spj.easychat.common.entity;
 
 public class CommonMessage{
     // 消息类型 0代表命令,1代表发送的消息
@@ -16,15 +12,19 @@ public class CommonMessage{
     // 接受者
     private String toUser;
 
+    private long time;
+
     public CommonMessage(String fromUser,String toUser, String msg) {
         this.fromUser = fromUser;
         this.toUser = toUser;
         this.msg = msg;
+        this.time = System.currentTimeMillis();
     }
 
     public CommonMessage(int type,CommandEnum command){
         this.type = type;
         this.command = command;
+        this.time = System.currentTimeMillis();
     }
 
     public int getType() {
@@ -65,6 +65,14 @@ public class CommonMessage{
 
     public void setToUser(String toUser) {
         this.toUser = toUser;
+    }
+
+    public long getTime() {
+        return time;
+    }
+
+    public void setTime(long time) {
+        this.time = time;
     }
 
     @Override

@@ -1,14 +1,12 @@
-package com.spj.easychat.common;
+package com.spj.easychat.common.entity;
 
 public class User {
     private String name;
     private String pass;
-    private long uid;
 
-    public User(String name, String pass, long uid) {
+    public User(String name, String pass) {
         this.name = name;
         this.pass = pass;
-        this.uid = uid;
     }
 
     public String getName() {
@@ -27,11 +25,4 @@ public class User {
         this.pass = pass;
     }
 
-    public long getUid() {
-        return uid;
-    }
-
-    public void setUid(long uid) {
-        this.uid = uid;
-    }
 }

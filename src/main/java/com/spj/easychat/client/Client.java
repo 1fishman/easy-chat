@@ -1,9 +1,9 @@
-package com.spj.easychat.chat.client;
+package com.spj.easychat.client;
 
-import com.spj.easychat.chat.client.handler.ClientMessageHandler;
-import com.spj.easychat.common.CommandEnum;
-import com.spj.easychat.common.CommonMessage;
-import com.spj.easychat.common.Message;
+import com.spj.easychat.client.handler.ClientMessageHandler;
+import com.spj.easychat.common.entity.CommandEnum;
+import com.spj.easychat.common.entity.CommonMessage;
+import com.spj.easychat.common.entity.Message;
 import com.spj.easychat.common.codec.MsgDecoder;
 import com.spj.easychat.common.codec.MsgEncoder;
 import io.netty.bootstrap.Bootstrap;
@@ -11,26 +11,30 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
-public class Main {
+public class Client {
 
     private static final Logger log = LoggerFactory.getLogger("client>>>:");
 
-    private  static CountDownLatch latch;
+    private CountDownLatch latch;
+    private State state;
 
     private String userName;
     private Channel channel;
-
+    private String remoteAddr;
+    private int port;
 
     private Bootstrap bootstrap;
     private EventLoopGroup workerGroup;
-    public void run(){
+
+    public void run(Client client){
         this.workerGroup = new NioEventLoopGroup(1);
         this.bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
@@ -38,9 +42,10 @@ public class Main {
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline().addLast(new MsgDecoder(Message.class),
+                        ch.pipeline().addLast(new IdleStateHandler(10,0,0)
+                                ,new MsgDecoder(Message.class),
                                 new MsgEncoder(Message.class),
-                                new ClientMessageHandler());
+                                new ClientMessageHandler(client));
                     }
                 })
                 .option(ChannelOption.SO_RCVBUF,1024)
@@ -56,6 +61,8 @@ public class Main {
     // 登录操作
     public void login(String remote,String userName,String pass) throws InterruptedException {
         String addr[] = remote.split(":");
+        this.remoteAddr = addr[0];
+        this.port = Integer.valueOf(addr[1]);
         log.info("连接服务器地址: {}, 端口: {}",addr[0],addr[1]);
         ChannelFuture cf = connect(addr[0],Integer.valueOf(addr[1]));
         cf.addListener(new ChannelFutureListener() {
@@ -67,6 +74,7 @@ public class Main {
                     message.setMsg(userName+":" + pass);
                     Message sendMessage = new Message(message);
                     channelFuture.channel().writeAndFlush(sendMessage);
+                    state = State.LOGINWAIT;
                 }else{
                     log.info("连接失败11111");
                     System.exit(1);
@@ -74,9 +82,33 @@ public class Main {
 
             }
         });
-        cf.channel().closeFuture().sync();
     }
 
+    public void register(String remote,String userName,String pass) throws InterruptedException {
+
+        String addr[] = remote.split(":");
+        this.remoteAddr = addr[0];
+        this.port = Integer.valueOf(addr[1]);
+        ChannelFuture cf = connect(remote,port);
+        cf.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                if (channelFuture.channel().isActive()){
+                    log.info("向服务器发送消息");
+                    CommonMessage message = new CommonMessage(1, CommandEnum.REGISTER);
+                    message.setMsg(userName+":" + pass);
+                    Message sendMessage = new Message(message);
+                    channelFuture.channel().writeAndFlush(sendMessage);
+                    state = State.REGISTERWAIT;
+                }else{
+                    log.info("连接失败11111");
+                    System.exit(1);
+                }
+
+            }
+        });
+        await();
+    }
 
     public void handler(String msg){
         if (!channel.isActive()){
@@ -97,14 +129,69 @@ public class Main {
                         System.exit(0);
                     }
                 });
+            }else if (msg.startsWith("@list:")){
+
             }
             CommonMessage msg1 = new CommonMessage(userName,null,msg);
             channel.writeAndFlush(new Message(msg1));
         }
     }
 
-    public static void downLatch(){
+    public void await() throws InterruptedException {
+        latch.await(10, TimeUnit.SECONDS);
+    }
+
+    public void downLatch(){
         latch.countDown();
+        latch = new CountDownLatch(1);
+    }
+
+    public CountDownLatch getLatch() {
+        return latch;
+    }
+
+    public void setLatch(CountDownLatch latch) {
+        this.latch = latch;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public Channel getChannel() {
+        return channel;
+    }
+
+    public void setChannel(Channel channel) {
+        this.channel = channel;
+    }
+
+    public String getRemoteAddr() {
+        return remoteAddr;
+    }
+
+    public void setRemoteAddr(String remoteAddr) {
+        this.remoteAddr = remoteAddr;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public State getState() {
+        return state;
+    }
+
+    public void setState(State state) {
+        this.state = state;
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -112,27 +199,30 @@ public class Main {
             log.info("参数个数错误,正确格式为,地址:端口号 用户名 密码");
             System.exit(1);
         }
-        latch = new CountDownLatch(1);
-        Main client = new Main();
+
+        Client client = new Client();
+        if (args[0].equals("register")){
+
+        }
         client.userName = args[1];
-        client.run();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    client.login(args[0],args[1],args[2]);
-                } catch (InterruptedException e) {
-                    log.info("连接失败");
-                    System.exit(1);
-                }
-            }
-        }).start();
+        client.run(client);
+        client.setLatch(new CountDownLatch(1));
+        try {
+            client.login(args[0],args[1],args[2]);
+        } catch (InterruptedException e) {
+            log.info("连接失败");
+            System.exit(1);
+        }
+
         log.info("开始等待");
-        latch.await();
+
         Scanner sc = new Scanner(System.in);
         while (sc.hasNext()){
-
             String msg = sc.nextLine();
+            if (client.getState() != State.NOLMAL){
+                log.info("服务器无响应或网络不好,请稍后再试");
+                System.exit(404);
+            }
             log.info("发送消息 {}" ,msg );
             client.handler(msg);
             //client.channel.writeAndFlush(new Message(new CommonMessage(client.userName,null,msg)));

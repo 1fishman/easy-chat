@@ -1,4 +1,4 @@
-package com.spj.easychat;
+package com.spj.easychat.server;
 
 import org.apache.ibatis.executor.Executor;
 

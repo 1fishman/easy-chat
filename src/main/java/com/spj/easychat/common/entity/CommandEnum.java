@@ -1,7 +1,8 @@
-package com.spj.easychat.common;
+package com.spj.easychat.common.entity;
 
 public enum CommandEnum {
     LOGIN("login"),
+    REGISTER("register"),
     LOGOUT("logout"),
     JOINTO("joinTo"),
     EXITTO("exitTO"),

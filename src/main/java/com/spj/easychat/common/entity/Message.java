@@ -1,4 +1,4 @@
-package com.spj.easychat.common;
+package com.spj.easychat.common.entity;
 
 import java.awt.*;
 import java.io.Serializable;

@@ -1,38 +1,69 @@
-package com.spj.easychat;
+package com.spj.easychat.server;
 
-import com.spj.easychat.common.CommonMessage;
-import com.spj.easychat.common.Message;
-import com.spj.easychat.common.Status;
+import com.spj.easychat.common.entity.CommonMessage;
+import com.spj.easychat.common.entity.Message;
+import com.spj.easychat.common.entity.Status;
+import com.spj.easychat.common.entity.User;
+import com.spj.easychat.server.dao.UserMapper;
 import io.netty.channel.Channel;
+import org.apache.ibatis.annotations.Mapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.lang.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class UserInfoUtil {
-    private static final Logger log = LoggerFactory.getLogger(UserInfoUtil.class);
+class UserChannel{
+
+    private String userName;
+    private Channel channel;
+
+    public UserChannel(String userName, Channel channel) {
+        this.userName = userName;
+        this.channel = channel;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public Channel getChannel() {
+        return channel;
+    }
+
+    public void setChannel(Channel channel) {
+        this.channel = channel;
+    }
+}
+
+@Component
+public class DefaultMessageHandler{
+    private static final Logger log = LoggerFactory.getLogger(DefaultMessageHandler.class);
 
     // 存储Channel到在线用户的映射
-    private static ConcurrentHashMap<Channel,String> channelUser = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Channel,String> channelUser = new ConcurrentHashMap<>();
 
     // 存储用户到Channel的映射
-    private static ConcurrentHashMap<String, UserChannel> userChannelMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, UserChannel> userChannelMap = new ConcurrentHashMap<>();
 
 
     // 存储用户监听的群组,键是用户,值是群名
-    private static ConcurrentHashMap<String,String> groupOfUserListener = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String,String> groupOfUserListener = new ConcurrentHashMap<>();
 
 
-    private static CopyOnWriteArrayList<UserChannel> userChannelList = new CopyOnWriteArrayList<>();
+    private CopyOnWriteArrayList<UserChannel> userChannelList = new CopyOnWriteArrayList<>();
 
-    private static ReentrantLock lock = new ReentrantLock();
+    private ReentrantLock lock = new ReentrantLock();
+
+    @Autowired
+    private UserMapper userMapper;
 
 
     /**
@@ -56,11 +87,11 @@ public class UserInfoUtil {
      * @param userName
      * @return Channel
      */
-    private static Channel getChannel(String userName){
+    private Channel getChannel(String userName){
         return userChannelMap.get(userName).getChannel();
     }
 
-    private static String getUserName(Channel ch){
+    private String getUserName(Channel ch){
         return channelUser.get(ch);
     }
 
@@ -70,7 +101,8 @@ public class UserInfoUtil {
      * @param channel
      * @return boolean
      */
-    public static void login(String userName,String pass,Channel channel){
+    public void login(String userName,String pass,Channel channel){
+        log.info("用户名:{}",userName);
         if (judgeUser(userName,pass)){
             log.info("channel is null ? {},{}",channel,userName );
             UserChannel userChannel = new UserChannel(userName,channel);
@@ -85,12 +117,12 @@ public class UserInfoUtil {
 
     }
 
-    public static void logout(Channel channel){
+    public void logout(Channel channel){
         String userName = channelUser.get(channel);
         logout(userName);
     }
 
-    public static void logout(String userName){
+    public void logout(String userName){
         UserChannel userChannel = userChannelMap.get(userName);
         userChannelMap.remove(userName);
         userChannelList.remove(userChannel);
@@ -99,28 +131,30 @@ public class UserInfoUtil {
 
     }
 
-
     /**
      * 判断用户名与密码是否正确
      * @param userName
      * @param pass
      * @return
      */
-    private static boolean judgeUser(String userName,String pass){
+    private boolean judgeUser(String userName,String pass){
         //TODO 待做, 从数据库中查找用户名与密码,然后查找
-        return true;
+        User user = userMapper.getUserByName(userName);
+        if (user.getPass().equals(pass)){
+            return true;
+        }
+        return false;
     }
 
-    public static void sendMessage(String msg, @Nullable String fromUser, @Nullable String toUser){
-        CommonMessage commonMessage = new CommonMessage(fromUser,toUser,msg);
-        Message message = new Message(commonMessage);
-        Channel ch = getChannel(toUser);
-        ch.writeAndFlush(message);
+    public void sendMessage(CommonMessage message){
+        Message sendmsg = new Message(message);
+        Channel ch = getChannel(message.getToUser());
+        ch.writeAndFlush(sendmsg);
     }
 
 
-    public static void broadcast(String msg,String fromUser){
-        CommonMessage commonMessage = new CommonMessage(fromUser,null,msg);
+    public void broadcast(CommonMessage commonMessage){
+        //CommonMessage commonMessage = new CommonMessage(fromUser,null,msg);
         Message message = new Message(commonMessage);
         for (UserChannel user : userChannelList){
             Channel ch = user.getChannel();
@@ -130,34 +164,6 @@ public class UserInfoUtil {
         }
     }
 
-
-
-    static class UserChannel{
-
-        private String userName;
-        private Channel channel;
-
-        public UserChannel(String userName, Channel channel) {
-            this.userName = userName;
-            this.channel = channel;
-        }
-
-        public String getUserName() {
-            return userName;
-        }
-
-        public void setUserName(String userName) {
-            this.userName = userName;
-        }
-
-        public Channel getChannel() {
-            return channel;
-        }
-
-        public void setChannel(Channel channel) {
-            this.channel = channel;
-        }
-    }
 
 
 }

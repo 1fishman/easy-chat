@@ -1,26 +1,26 @@
-package com.spj.easychat.chat;
+package com.spj.easychat.server;
 
-import com.spj.easychat.chat.server.handler.ServerMessageHandler;
-import com.spj.easychat.common.Message;
+import com.spj.easychat.server.handler.ServerMessageHandler;
+import com.spj.easychat.common.entity.Message;
 import com.spj.easychat.common.codec.MsgDecoder;
 import com.spj.easychat.common.codec.MsgEncoder;
-import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
-
 @Component
 @ConfigurationProperties(prefix = "chat.webserver")
+
 public class Server implements InitializingBean , DisposableBean {
 
     public static final Logger log = LoggerFactory.getLogger(Server.class);
@@ -30,6 +30,9 @@ public class Server implements InitializingBean , DisposableBean {
     private ServerBootstrap serverBootstrap;
     private EventLoopGroup group;
     private EventLoopGroup workGroup;
+
+    @Autowired
+    private ServerMessageHandler serverMessageHandler;
 
     private ChannelFuture cf ;
 
@@ -42,9 +45,12 @@ public class Server implements InitializingBean , DisposableBean {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
-                        socketChannel.pipeline().addLast(new MsgDecoder(Message.class)
+                        socketChannel.pipeline().addLast(
+                                new IdleStateHandler(30,1,0)
+                        ,new MsgDecoder(Message.class)
                         ,new MsgEncoder(Message.class)
-                        , new ServerMessageHandler());
+                        , serverMessageHandler  // 怎样让这个无缝继承是个问题. TODO
+                        );
                     }
                 })
                 .option(ChannelOption.SO_BACKLOG,1024)

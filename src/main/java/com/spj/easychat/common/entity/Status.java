@@ -1,4 +1,4 @@
-package com.spj.easychat.common;
+package com.spj.easychat.common.entity;
 
 public enum  Status {
     AUTHENTICATIONERROT("用户名或密码不对",101),    // 身份验证错误 101

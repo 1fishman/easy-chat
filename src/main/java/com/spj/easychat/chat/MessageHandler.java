@@ -1,7 +1,6 @@
 package com.spj.easychat.chat;
 
-import com.spj.easychat.common.CommonMessage;
-import com.spj.easychat.common.Message;
+import com.spj.easychat.common.entity.Message;
 
 public interface MessageHandler {
     void handleMessage(Message msg);
