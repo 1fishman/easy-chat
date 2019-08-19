@@ -20,7 +20,7 @@ public class ClientMessageHandler extends SimpleChannelInboundHandler {
         this.client = client;
     }
 
-    private static final Logger log = LoggerFactory.getLogger("client>>>:");
+    private static final Logger log = LoggerFactory.getLogger("");
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object o) throws Exception {
@@ -31,23 +31,19 @@ public class ClientMessageHandler extends SimpleChannelInboundHandler {
                 heartMessage.setType(2);
                 ctx.writeAndFlush(new Message(heartMessage));
             }else if(obj instanceof CommonMessage){
-                log.info("接收到服务器的应答消息 {}" ,((CommonMessage)obj).toString());
                 CommonMessage msg = (CommonMessage)obj;
-                if (msg.getType() == 1){
-                    if (msg.getMsg().equals(Status.SUCCESS)){
-
-                    }
-                }else{
-                    log.info("{}:来自{}的消息: {} ",((Message) o).getTime(),msg.getFromUser(),msg.getMsg());
-                }
+                log.info("{}:{}: {} ",msg.getSendTime(),msg.getFromUser(),msg.getMsg());
             }else if (obj instanceof Status){
-                log.info("接收到服务器的应答消息 {}" ,(obj).toString());
-                if (obj.equals(Status.SUCCESS)){
+                if (obj.equals(Status.LOGINSUCCESS)){
                     client.downLatch();
                     client.setState(State.NOLMAL);
-                    log.info("登录成功,可以发送消息了");
+                    log.info(((Status) obj).getMsg());
                 }else if (obj.equals(Status.NOT_LOGIN_ERROR)){
-                    log.info("还未登录,请重新登录");
+                    log.info(((Status) obj).getMsg());
+                    System.exit(((Status) obj).getStatusNo());
+                }else if (obj.equals(Status.USERNAMEEXIST)){
+                    log.info(((Status) obj).getMsg());
+                    System.exit(((Status) obj).getStatusNo());
                 }
 
             }

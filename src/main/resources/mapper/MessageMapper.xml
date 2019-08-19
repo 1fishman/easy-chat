@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.spj.easychat.server.dao.MessageMapper">
+    <!--<resultMap id="BaseResultMap" type="com.spj.easychat.common.entity.CommonMessage">
+        <result column="name" jdbcType="VARCHAR" property="code" />
+        <result column="pass" jdbcType="VARCHAR" property="name" />
+    </resultMap>-->
+
+
+    <select id="getRecentMessageList" resultType="com.spj.easychat.common.entity.CommonMessage">
+        select from_user,to_user,msg,send_time from message where (to_user = #{userName})
+        order by send_time
+        limit 20;
+    </select>
+
+    <insert id="insertMessage" parameterType="com.spj.easychat.common.entity.CommonMessage">
+        insert into message (msg,from_user,to_user,send_time) values(#{msg},#{fromUser},#{toUser},#{sendTime})
+    </insert>
+
+</mapper>

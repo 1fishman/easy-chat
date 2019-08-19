@@ -1,9 +1,12 @@
 package com.spj.easychat.common.entity;
 
-public enum  Status {
+public enum    Status {
     AUTHENTICATIONERROT("用户名或密码不对",101),    // 身份验证错误 101
-    SUCCESS("成功",200), // 请求成功
-    NOT_LOGIN_ERROR("请先登录",102); // 中间可能掉线了,被服务器暂定为下线了,要重新登录
+    LOGINSUCCESS("成功",200), // 请求成功
+    NOT_LOGIN_ERROR("请先登录",102), // 中间可能掉线了,被服务器暂定为下线了,要重新登录
+    USERNAMEEXIST("用户名已存在",103),
+    REGISTERSUCCESS("注册成功",200);
+
 
 
     Status(String msg,int statusNo){

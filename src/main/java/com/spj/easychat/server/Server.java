@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConfigurationProperties(prefix = "chat.webserver")
-
+@ChannelHandler.Sharable
 public class Server implements InitializingBean , DisposableBean {
 
     public static final Logger log = LoggerFactory.getLogger(Server.class);

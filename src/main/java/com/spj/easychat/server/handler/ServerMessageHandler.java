@@ -6,6 +6,8 @@ import com.spj.easychat.common.entity.Message;
 import com.spj.easychat.common.entity.Status;
 import com.spj.easychat.server.ChatEventLoop;
 import com.spj.easychat.server.DefaultMessageHandler;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.timeout.IdleState;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Scope(ConfigurableListableBeanFactory.SCOPE_PROTOTYPE)
+@ChannelHandler.Sharable
 public class ServerMessageHandler extends SimpleChannelInboundHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ServerMessageHandler.class);
@@ -76,6 +79,14 @@ public class ServerMessageHandler extends SimpleChannelInboundHandler {
             switch (commonMessage.getCommand()){
                 case LOGIN:{
                     login(ctx,commonMessage);
+                    break;
+                }
+                case REGISTER:{
+                    register(ctx,commonMessage);
+                    break;
+                }
+                case LIST:{
+                    getHistoryMsg(ctx,commonMessage);
                 }
             }
         }else{
@@ -88,18 +99,30 @@ public class ServerMessageHandler extends SimpleChannelInboundHandler {
         }
     }
 
+    private void getHistoryMsg(ChannelHandlerContext ctx, CommonMessage commonMessage) {
+        if (commonMessage.getMsg() != null){
+            log.info("查询单个user的消息");
+            ChatEventLoop.executor(()->messageHandler.getHistoryMsg(ctx.channel(),commonMessage.getFromUser()));
+        }else{
+            log.info("查询群组消息");
+            ChatEventLoop.executor(()->messageHandler.getHistoryMsg(ctx.channel(),messageHandler.getGroupName()));
+        }
+    }
+
+    public void register(ChannelHandlerContext ctx,CommonMessage commonMessage){
+        String[] userInfo = commonMessage.getMsg().split(":");
+        if (userInfo.length != 2){
+            ctx.writeAndFlush(new Message((Status.AUTHENTICATIONERROT)));
+        }
+        ChatEventLoop.executor(() -> messageHandler.register(userInfo[0],userInfo[1],ctx.channel()));
+    }
+
     public void login(ChannelHandlerContext ctx,CommonMessage commonMessage){
         String[] userInfo = commonMessage.getMsg().split(":");
         if (userInfo.length != 2){
             ctx.writeAndFlush(new Message((Status.AUTHENTICATIONERROT)));
         }
-        log.info("userInfo[1] {}, 2{}",userInfo[0],userInfo[1]);
-        ChatEventLoop.executor(new Runnable() {
-            @Override
-            public void run() {
-                messageHandler.login(userInfo[0],userInfo[1],ctx.channel());
-            }
-        });
+        ChatEventLoop.executor(() -> messageHandler.login(userInfo[0],userInfo[1],ctx.channel()));
     }
 
     public void doHeartMessage(HeartMessage heartMessage,ChannelHandlerContext ctx){

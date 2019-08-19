@@ -4,6 +4,7 @@ import com.spj.easychat.common.entity.CommonMessage;
 import com.spj.easychat.common.entity.Message;
 import com.spj.easychat.common.entity.Status;
 import com.spj.easychat.common.entity.User;
+import com.spj.easychat.server.dao.MessageMapper;
 import com.spj.easychat.server.dao.UserMapper;
 import io.netty.channel.Channel;
 import org.apache.ibatis.annotations.Mapper;
@@ -12,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.sql.Timestamp;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
@@ -62,8 +65,13 @@ public class DefaultMessageHandler{
 
     private ReentrantLock lock = new ReentrantLock();
 
+    private final String groupName = "----------";
+
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private MessageMapper messageMapper;
 
 
     /**
@@ -88,7 +96,8 @@ public class DefaultMessageHandler{
      * @return Channel
      */
     private Channel getChannel(String userName){
-        return userChannelMap.get(userName).getChannel();
+        UserChannel userChannel = userChannelMap.get(userName);
+        return userChannel == null ? null:userChannel.getChannel();
     }
 
     private String getUserName(Channel ch){
@@ -109,12 +118,10 @@ public class DefaultMessageHandler{
             channelUser.put(channel,userName);
             userChannelMap.put(userName,userChannel);
             userChannelList.add(userChannel);
-            channel.writeAndFlush(new Message(Status.SUCCESS));
+            channel.writeAndFlush(new Message(Status.LOGINSUCCESS));
         }else{
             channel.writeAndFlush(new Message(Status.AUTHENTICATIONERROT));
         }
-
-
     }
 
     public void logout(Channel channel){
@@ -149,21 +156,56 @@ public class DefaultMessageHandler{
     public void sendMessage(CommonMessage message){
         Message sendmsg = new Message(message);
         Channel ch = getChannel(message.getToUser());
+        if (ch == null){
+            messageMapper.insertMessage(message);
+            getChannel(message.getFromUser()).writeAndFlush(new Message(new CommonMessage("系统消息",message.getFromUser(),"对方不在线")));
+            return;
+        }
         ch.writeAndFlush(sendmsg);
     }
 
 
     public void broadcast(CommonMessage commonMessage){
         //CommonMessage commonMessage = new CommonMessage(fromUser,null,msg);
+        commonMessage.setToUser(groupName);
+        messageMapper.insertMessage(commonMessage);
+        commonMessage.setToUser(null);
         Message message = new Message(commonMessage);
         for (UserChannel user : userChannelList){
             Channel ch = user.getChannel();
             if (ch.isActive()){
                 ch.writeAndFlush(message);
+            }else {
+                ch.close();
             }
         }
     }
 
 
+    public void register(String userName, String pass, Channel channel) {
+        try{
+            userMapper.addUser(new User(userName,pass));
+            UserChannel userChannel = new UserChannel(userName,channel);
+            channelUser.put(channel,userName);
+            userChannelMap.put(userName,userChannel);
+            userChannelList.add(userChannel);
+            channel.writeAndFlush(new Message(Status.REGISTERSUCCESS));
 
+        }catch (Exception e){
+            channel.writeAndFlush(new Message(Status.USERNAMEEXIST));
+        }
+    }
+
+    public void getHistoryMsg(Channel channel, String userName) {
+        List<CommonMessage> list = messageMapper.getRecentMessageList(userName);
+        Message msg = new Message(null);
+        for (CommonMessage commonMessage : list){
+            msg.setMsg(commonMessage);
+            channel.writeAndFlush(msg);
+        }
+    }
+
+    public String getGroupName(){
+        return groupName;
+    }
 }

@@ -1,5 +1,8 @@
 package com.spj.easychat.common.entity;
 
+import java.sql.Time;
+import java.sql.Timestamp;
+
 public class CommonMessage{
     // 消息类型 0代表命令,1代表发送的消息
     private int type;
@@ -12,19 +15,31 @@ public class CommonMessage{
     // 接受者
     private String toUser;
 
-    private long time;
+    private Timestamp sendTime;
+
+    public CommonMessage(String fromUser,String toUser,String msg, Timestamp sendTime){
+        this.fromUser = fromUser;
+        this.toUser = toUser;
+        this.msg = msg;
+        this.sendTime =sendTime;
+    }
 
     public CommonMessage(String fromUser,String toUser, String msg) {
         this.fromUser = fromUser;
         this.toUser = toUser;
         this.msg = msg;
-        this.time = System.currentTimeMillis();
+        this.sendTime =new Timestamp(System.currentTimeMillis());
+    }
+
+    public static void main(String[] args) {
+        Timestamp time = new Timestamp(System.currentTimeMillis());
+        System.out.println(time);
     }
 
     public CommonMessage(int type,CommandEnum command){
         this.type = type;
         this.command = command;
-        this.time = System.currentTimeMillis();
+        this.sendTime = new Timestamp(System.currentTimeMillis());
     }
 
     public int getType() {
@@ -67,13 +82,10 @@ public class CommonMessage{
         this.toUser = toUser;
     }
 
-    public long getTime() {
-        return time;
+    public Timestamp getSendTime() {
+        return sendTime;
     }
 
-    public void setTime(long time) {
-        this.time = time;
-    }
 
     @Override
     public String toString() {
@@ -83,6 +95,7 @@ public class CommonMessage{
                 ", msg='" + msg + '\'' +
                 ", fromUser='" + fromUser + '\'' +
                 ", toUser='" + toUser + '\'' +
+                ", sendTime='" + sendTime + '\'' +
                 '}';
     }
 }

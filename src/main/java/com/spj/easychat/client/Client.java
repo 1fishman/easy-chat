@@ -69,7 +69,6 @@ public class Client {
             @Override
             public void operationComplete(ChannelFuture channelFuture) throws Exception {
                 if (channelFuture.channel().isActive()){
-                    log.info("向服务器发送消息");
                     CommonMessage message = new CommonMessage(1, CommandEnum.LOGIN);
                     message.setMsg(userName+":" + pass);
                     Message sendMessage = new Message(message);
@@ -94,7 +93,6 @@ public class Client {
             @Override
             public void operationComplete(ChannelFuture channelFuture) throws Exception {
                 if (channelFuture.channel().isActive()){
-                    log.info("向服务器发送消息");
                     CommonMessage message = new CommonMessage(1, CommandEnum.REGISTER);
                     message.setMsg(userName+":" + pass);
                     Message sendMessage = new Message(message);
@@ -116,6 +114,9 @@ public class Client {
         }
         if (msg.length() != 0 && msg.charAt(0) == '@'){
             int nameIndex = msg.indexOf(':');
+            if (nameIndex == -1){
+                log.info("消息格式不合法");
+            }
             String toUserName = msg.substring(1,nameIndex);
             String sendMsg = msg.substring(nameIndex+1);
             CommonMessage msg1 = new CommonMessage(userName,toUserName,sendMsg);
@@ -129,8 +130,16 @@ public class Client {
                         System.exit(0);
                     }
                 });
-            }else if (msg.startsWith("@list:")){
-
+            }else if (msg.startsWith("list")){
+                CommonMessage message = new CommonMessage(1, CommandEnum.LIST);
+                Message sendMessage = new Message(message);
+                int index = msg.indexOf(':');
+                message.setFromUser(userName);
+                if (index != -1){
+                    message.setMsg(msg.substring(index));
+                }
+                channel.writeAndFlush(sendMessage);
+                return;
             }
             CommonMessage msg1 = new CommonMessage(userName,null,msg);
             channel.writeAndFlush(new Message(msg1));
@@ -202,7 +211,7 @@ public class Client {
 
         Client client = new Client();
         if (args[0].equals("register")){
-
+            client.register(args[0],args[1],args[2]);
         }
         client.userName = args[1];
         client.run(client);
@@ -214,16 +223,16 @@ public class Client {
             System.exit(1);
         }
 
-        log.info("开始等待");
+        //log.info("开始等待");
 
         Scanner sc = new Scanner(System.in);
         while (sc.hasNext()){
-            String msg = sc.nextLine();
+            String msg = sc.next();
             if (client.getState() != State.NOLMAL){
                 log.info("服务器无响应或网络不好,请稍后再试");
                 System.exit(404);
             }
-            log.info("发送消息 {}" ,msg );
+            msg = msg.trim();
             client.handler(msg);
             //client.channel.writeAndFlush(new Message(new CommonMessage(client.userName,null,msg)));
         }
