@@ -102,10 +102,10 @@ public class ServerMessageHandler extends SimpleChannelInboundHandler {
     private void getHistoryMsg(ChannelHandlerContext ctx, CommonMessage commonMessage) {
         if (commonMessage.getMsg() != null){
             log.info("查询单个user的消息");
-            ChatEventLoop.executor(()->messageHandler.getHistoryMsg(ctx.channel(),commonMessage.getFromUser()));
+            ChatEventLoop.executor(()->messageHandler.getHistoryMsg(ctx.channel(),commonMessage.getMsg(),commonMessage.getFromUser()));
         }else{
             log.info("查询群组消息");
-            ChatEventLoop.executor(()->messageHandler.getHistoryMsg(ctx.channel(),messageHandler.getGroupName()));
+            ChatEventLoop.executor(()->messageHandler.getHistoryMsg(ctx.channel(),null,messageHandler.getGroupName()));
         }
     }
 

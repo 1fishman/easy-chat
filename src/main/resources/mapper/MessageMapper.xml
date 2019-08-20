@@ -8,8 +8,17 @@
 
 
     <select id="getRecentMessageList" resultType="com.spj.easychat.common.entity.CommonMessage">
-        select from_user,to_user,msg,send_time from message where (to_user = #{userName})
-        order by send_time
+        select from_user,to_user,msg,send_time
+        from message
+        <where>
+            <if test="toUser != null">
+                to_user =#{toUser}
+            </if>
+            <if test="fromUser != null">
+                and from_user = #{fromUser}
+            </if>
+        </where>
+        order by send_time desc
         limit 20;
     </select>
 

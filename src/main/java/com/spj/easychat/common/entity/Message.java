@@ -27,4 +27,12 @@ public class Message {
     public void setMsg(Object msg) {
         this.msg = msg;
     }
+
+    @Override
+    public String toString() {
+        return "Message{" +
+                "time=" + time +
+                ", msg=" + msg +
+                '}';
+    }
 }

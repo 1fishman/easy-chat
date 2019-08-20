@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -185,10 +186,10 @@ public class DefaultMessageHandler{
     public void register(String userName, String pass, Channel channel) {
         try{
             userMapper.addUser(new User(userName,pass));
-            UserChannel userChannel = new UserChannel(userName,channel);
+            /*UserChannel userChannel = new UserChannel(userName,channel);
             channelUser.put(channel,userName);
             userChannelMap.put(userName,userChannel);
-            userChannelList.add(userChannel);
+            userChannelList.add(userChannel);*/
             channel.writeAndFlush(new Message(Status.REGISTERSUCCESS));
 
         }catch (Exception e){
@@ -196,11 +197,17 @@ public class DefaultMessageHandler{
         }
     }
 
-    public void getHistoryMsg(Channel channel, String userName) {
-        List<CommonMessage> list = messageMapper.getRecentMessageList(userName);
-        Message msg = new Message(null);
+    public void getHistoryMsg(Channel channel,String fromUser,  String toUser){
+        log.info("fromUser:{} , toUser{}",fromUser,toUser);
+        List<CommonMessage> list = messageMapper.getRecentMessageList(fromUser,toUser);
+        if (list.isEmpty()){
+            channel.writeAndFlush(new Message(new CommonMessage("系统消息",getUserName(channel),"没有与对方的聊天记录哦")));
+        }
+        Collections.reverse(list);
         for (CommonMessage commonMessage : list){
+            Message msg = new Message(null);
             msg.setMsg(commonMessage);
+            log.info(msg.toString());
             channel.writeAndFlush(msg);
         }
     }

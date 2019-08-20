@@ -21,5 +21,4 @@ public class ChatEventLoop {
         service.execute(runnable);
     }
 
-
 }

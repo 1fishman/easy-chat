@@ -49,7 +49,7 @@ public class Server implements InitializingBean , DisposableBean {
                                 new IdleStateHandler(30,1,0)
                         ,new MsgDecoder(Message.class)
                         ,new MsgEncoder(Message.class)
-                        , serverMessageHandler  // 怎样让这个无缝继承是个问题. TODO
+                        , serverMessageHandler
                         );
                     }
                 })

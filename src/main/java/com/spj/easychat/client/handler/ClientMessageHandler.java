@@ -24,6 +24,7 @@ public class ClientMessageHandler extends SimpleChannelInboundHandler {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object o) throws Exception {
+
         if (o instanceof Message){
             Object obj =((Message)o).getMsg();
             if (obj instanceof HeartMessage){
@@ -38,6 +39,10 @@ public class ClientMessageHandler extends SimpleChannelInboundHandler {
                     client.downLatch();
                     client.setState(State.NOLMAL);
                     log.info(((Status) obj).getMsg());
+                }else if (obj.equals(Status.REGISTERSUCCESS)){
+                    log.info(((Status) obj).getMsg());
+                    client.downLatch();
+                    client.setState(State.NOLMAL);
                 }else if (obj.equals(Status.NOT_LOGIN_ERROR)){
                     log.info(((Status) obj).getMsg());
                     System.exit(((Status) obj).getStatusNo());
@@ -62,6 +67,9 @@ public class ClientMessageHandler extends SimpleChannelInboundHandler {
             if (e.state() == IdleState.WRITER_IDLE){
                 //DefaultMessageHandler.logout(ctx.channel());
                 ctx.writeAndFlush(new Message(new HeartMessage(1)));
+            }else if (e.state() == IdleState.READER_IDLE){
+                ctx.close();
+                client.login(client.getRemoteAddr()+":"+client.getPort(),client.getUserName(),client.getPass());
             }
         }
     }

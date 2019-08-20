@@ -27,6 +27,7 @@ public class Client {
     private State state;
 
     private String userName;
+    private String pass;
     private Channel channel;
     private String remoteAddr;
     private int port;
@@ -81,6 +82,7 @@ public class Client {
 
             }
         });
+        await();
     }
 
     public void register(String remote,String userName,String pass) throws InterruptedException {
@@ -88,7 +90,7 @@ public class Client {
         String addr[] = remote.split(":");
         this.remoteAddr = addr[0];
         this.port = Integer.valueOf(addr[1]);
-        ChannelFuture cf = connect(remote,port);
+        ChannelFuture cf = connect(remoteAddr,port);
         cf.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture channelFuture) throws Exception {
@@ -136,7 +138,7 @@ public class Client {
                 int index = msg.indexOf(':');
                 message.setFromUser(userName);
                 if (index != -1){
-                    message.setMsg(msg.substring(index));
+                    message.setMsg(msg.substring(index+1));
                 }
                 channel.writeAndFlush(sendMessage);
                 return;
@@ -203,28 +205,39 @@ public class Client {
         this.state = state;
     }
 
+    public String getPass() {
+        return pass;
+    }
+
+    public void setPass(String pass) {
+        this.pass = pass;
+    }
+
     public static void main(String[] args) throws InterruptedException {
         if (args.length < 3){
             log.info("参数个数错误,正确格式为,地址:端口号 用户名 密码");
             System.exit(1);
         }
-
         Client client = new Client();
-        if (args[0].equals("register")){
-            client.register(args[0],args[1],args[2]);
-        }
-        client.userName = args[1];
         client.run(client);
         client.setLatch(new CountDownLatch(1));
+        if (args[0].equals("register")){
+            client.register(args[0],args[1],args[2]);
+            client.setUserName(args[2]);
+            client.setPass(args[3]);
+        }else{
+            client.setRemoteAddr(args[0].split(":")[0]);
+            client.setPort(Integer.valueOf(args[0].split(":")[1]));
+            client.setUserName(args[1]);
+            client.setPass(args[2]);
+        }
+
         try {
             client.login(args[0],args[1],args[2]);
         } catch (InterruptedException e) {
             log.info("连接失败");
             System.exit(1);
         }
-
-        //log.info("开始等待");
-
         Scanner sc = new Scanner(System.in);
         while (sc.hasNext()){
             String msg = sc.next();
