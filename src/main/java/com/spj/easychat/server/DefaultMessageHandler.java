@@ -228,11 +228,9 @@ public class DefaultMessageHandler implements InitializingBean {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             List<CommonMessage> ls = redisService.getCacheList(DefaultMessageHandler.msgKey);
             Collections.reverse(ls);
-            System.out.println("12312312312312" );
             if (!ls.isEmpty()){
                 messageMapper.insertMessages(ls);
             }
-            System.out.println(1222222);
         },0,2, TimeUnit.SECONDS);
 
     }

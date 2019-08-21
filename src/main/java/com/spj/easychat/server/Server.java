@@ -4,7 +4,6 @@ import com.spj.easychat.server.handler.ServerMessageHandler;
 import com.spj.easychat.common.entity.Message;
 import com.spj.easychat.common.codec.MsgDecoder;
 import com.spj.easychat.common.codec.MsgEncoder;
-import com.spj.easychat.server.timetask.FlushMessagToDB;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;

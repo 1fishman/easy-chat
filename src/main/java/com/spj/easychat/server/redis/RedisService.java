@@ -15,9 +15,13 @@ import redis.clients.jedis.JedisPool;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Service
 public class RedisService {
+
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     @Autowired
     JedisPool jedisPool;
@@ -28,11 +32,13 @@ public class RedisService {
     public <T> T get(String key,Class<T> clazz){
         Jedis jedis = null;
         try {
+            lock.readLock().lock();
             jedis =  jedisPool.getResource();
             String realKey = key;
             String value = jedis.get(realKey);
             return stringToBean(value,clazz);
         }finally {
+            lock.readLock().unlock();
             returnToPool(jedis);
         }
     }
@@ -84,6 +90,7 @@ public class RedisService {
     public List<CommonMessage> getCacheList(String key){
         Jedis jedis = null;
         try {
+            lock.writeLock().lock();
             jedis = jedisPool.getResource();
             List<byte[]> ls = jedis.lrange(key.getBytes(),0,-1);
             jedis.del(key.getBytes());
@@ -93,6 +100,7 @@ public class RedisService {
             }
             return res;
         }finally {
+            lock.writeLock().unlock();
             returnToPool(jedis);
         }
     }
@@ -100,8 +108,19 @@ public class RedisService {
     public void lpush(String key,CommonMessage message){
         Jedis jedis = null;
         try {
+            lock.readLock().lock();
             jedis = jedisPool.getResource();
             jedis.lpush(key.getBytes(), SerializationUtil.serialize(message));
+        }finally {
+            lock.readLock().unlock();
+            returnToPool(jedis);
+        }
+    }
+    public void rpush(String key,CommonMessage message){
+        Jedis jedis = null;
+        try {
+            jedis = jedisPool.getResource();
+            jedis.rpush(key.getBytes(), SerializationUtil.serialize(message));
         }finally {
             returnToPool(jedis);
         }
