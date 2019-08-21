@@ -1,5 +1,7 @@
 package com.spj.easychat.common.entity;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 import java.sql.Time;
 import java.sql.Timestamp;
 
@@ -7,6 +9,7 @@ public class CommonMessage{
     // 消息类型 0代表命令,1代表发送的消息
     private int type;
     // 属于什么命令
+    @JSONField(serialize = false,deserialize = false)
     private CommandEnum command ;
     // 消息内容
     private String msg;
@@ -17,7 +20,16 @@ public class CommonMessage{
 
     private Timestamp sendTime;
 
-    public CommonMessage(String fromUser,String toUser,String msg, Timestamp sendTime){
+    public CommonMessage(int type, CommandEnum command, String msg, String fromUser, String toUser, Timestamp sendTime) {
+        this.type = type;
+        this.command = command;
+        this.msg = msg;
+        this.fromUser = fromUser;
+        this.toUser = toUser;
+        this.sendTime = sendTime;
+    }
+
+    public CommonMessage(String fromUser, String toUser, String msg, Timestamp sendTime){
         this.fromUser = fromUser;
         this.toUser = toUser;
         this.msg = msg;

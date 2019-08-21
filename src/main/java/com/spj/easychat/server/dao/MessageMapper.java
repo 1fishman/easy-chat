@@ -15,5 +15,6 @@ public interface MessageMapper {
     List<CommonMessage> getRecentMessageListByFromUser(String userName);
 
     void insertMessage(CommonMessage commonMessage);
+    void insertMessages(@Param("list") List<CommonMessage> list);
 
 }

@@ -26,4 +26,12 @@
         insert into message (msg,from_user,to_user,send_time) values(#{msg},#{fromUser},#{toUser},#{sendTime})
     </insert>
 
+    <insert id="insertMessages" parameterType="com.spj.easychat.common.entity.CommonMessage">
+        insert into message (msg,from_user,to_user,send_time)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.msg},#{item.fromUser},#{item.toUser},#{item.sendTime})
+        </foreach>
+
+    </insert>
 </mapper>
