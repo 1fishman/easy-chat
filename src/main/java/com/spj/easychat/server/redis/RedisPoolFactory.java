@@ -1,5 +1,6 @@
 package com.spj.easychat.server.redis;
 
+import com.spj.easychat.server.config.RedisConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;

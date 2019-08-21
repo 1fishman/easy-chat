@@ -239,8 +239,8 @@ public class Client {
             System.exit(1);
         }
         Scanner sc = new Scanner(System.in);
-        while (sc.hasNext()){
-            String msg = sc.next();
+        while (sc.hasNextLine()){
+            String msg = sc.nextLine();
             if (client.getState() != State.NOLMAL){
                 log.info("服务器无响应或网络不好,请稍后再试");
                 System.exit(404);
