@@ -43,13 +43,30 @@ public class RedisService {
         }
     }
 
-    public List<CommonMessage> getCacheList(String key){
+    public List<CommonMessage> getAllCacheList(String key){
+        Jedis jedis = null;
+        try {
+            lock.readLock().lock();
+            jedis = jedisPool.getResource();
+            List<byte[]> ls = jedis.lrange(key.getBytes(),0,-1);
+            List<CommonMessage> res = new ArrayList<>(ls.size());
+            for (byte [] bytes : ls){
+                res.add(SerializationUtil.deserialie(bytes,CommonMessage.class));
+            }
+            return res;
+        }finally {
+            lock.readLock().unlock();
+            returnToPool(jedis);
+        }
+    }
+
+    public List<CommonMessage> getEarlyCacheList(String key){
         Jedis jedis = null;
         try {
             lock.writeLock().lock();
             jedis = jedisPool.getResource();
-            List<byte[]> ls = jedis.lrange(key.getBytes(),0,-1);
-            jedis.del(key.getBytes());
+            List<byte[]> ls = jedis.lrange(key.getBytes(),20,-1);
+            jedis.ltrim(key.getBytes(),0,20);
             List<CommonMessage> res = new ArrayList<>(ls.size());
             for (byte [] bytes : ls){
                 res.add(SerializationUtil.deserialie(bytes,CommonMessage.class));

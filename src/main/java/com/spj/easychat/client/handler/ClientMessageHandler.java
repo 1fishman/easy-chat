@@ -64,10 +64,7 @@ public class ClientMessageHandler extends SimpleChannelInboundHandler {
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof IdleStateEvent){
             IdleStateEvent e = (IdleStateEvent) evt;
-            if (e.state() == IdleState.WRITER_IDLE){
-                //DefaultMessageHandler.logout(ctx.channel());
-                ctx.writeAndFlush(new Message(new HeartMessage(1)));
-            }else if (e.state() == IdleState.READER_IDLE){
+            if (e.state() == IdleState.READER_IDLE){
                 ctx.close();
                 client.login(client.getRemoteAddr()+":"+client.getPort(),client.getUserName(),client.getPass());
             }

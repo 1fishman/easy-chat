@@ -10,7 +10,7 @@ import java.util.List;
 
 @Mapper
 public interface MessageMapper {
-    List<CommonMessage> getRecentMessageList(@Param("fromUser") String fromUser,@Param("toUser") String toUser);
+    List<CommonMessage> getRecentMessageList(@Param("fromUser") String fromUser,@Param("toUser") String toUser, @Param("count") int count);
 
     List<CommonMessage> getRecentMessageListByFromUser(String userName);
 

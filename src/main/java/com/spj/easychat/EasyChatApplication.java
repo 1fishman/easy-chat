@@ -10,8 +10,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @MapperScan("com.spj.easychat.server.dao")
 @SpringBootApplication
-@EnableScheduling
-@EnableAsync
 public class EasyChatApplication {
 
     public static void main(String[] args) {

@@ -47,7 +47,7 @@ public class Server implements InitializingBean , DisposableBean {
                     @Override
                     protected void initChannel(SocketChannel socketChannel) throws Exception {
                         socketChannel.pipeline().addLast(
-                                new IdleStateHandler(30,1,0)
+                                new IdleStateHandler(10,1,0)
                         ,new MsgDecoder(Message.class)
                         ,new MsgEncoder(Message.class)
                         , serverMessageHandler

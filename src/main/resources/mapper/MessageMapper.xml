@@ -19,7 +19,7 @@
             </if>
         </where>
         order by send_time desc
-        limit 20;
+        limit #{count};
     </select>
 
     <insert id="insertMessage" parameterType="com.spj.easychat.common.entity.CommonMessage">

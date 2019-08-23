@@ -8,6 +8,7 @@ import com.spj.easychat.server.dao.MessageMapper;
 import com.spj.easychat.server.dao.UserMapper;
 import com.spj.easychat.server.redis.RedisService;
 import io.netty.channel.Channel;
+import jdk.nashorn.internal.runtime.arrays.IteratorAction;
 import org.apache.ibatis.annotations.Mapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,9 +18,12 @@ import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 class UserChannel{
 
@@ -65,11 +69,13 @@ public class DefaultMessageHandler implements InitializingBean {
 
     private CopyOnWriteArrayList<UserChannel> userChannelList = new CopyOnWriteArrayList<>();
 
-    private ReentrantLock lock = new ReentrantLock();
+    private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public static final String msgKey = "MSGKEY";
 
     private final String groupName = "----------";
+
+    private volatile boolean isInserting = false;
 
     @Autowired
     private UserMapper userMapper;
@@ -205,12 +211,41 @@ public class DefaultMessageHandler implements InitializingBean {
 
     public void getHistoryMsg(Channel channel,String fromUser,  String toUser){
         log.info("fromUser:{} , toUser{}",fromUser,toUser);
-        List<CommonMessage> list = messageMapper.getRecentMessageList(fromUser,toUser);
-        if (list.isEmpty()){
-            channel.writeAndFlush(new Message(new CommonMessage("系统消息",getUserName(channel),"没有与对方的聊天记录哦")));
+        List<CommonMessage> cacheList = redisService.getAllCacheList(DefaultMessageHandler.msgKey);
+        List<CommonMessage> resList = new LinkedList<>();
+        int count = 0;
+        Iterator it = cacheList.iterator();
+        while (it.hasNext()){
+            CommonMessage commonMessage = (CommonMessage) it.next();
+            log.info("redis中的消息{}",commonMessage);
+            if (fromUser == null){
+                if (commonMessage.getToUser().equals(groupName)){
+                    ((LinkedList<CommonMessage>) resList).addLast(commonMessage);
+                    count++;
+                }
+            }else{
+                if (commonMessage.getFromUser().equals(fromUser) && commonMessage.getToUser().equals(toUser)){
+                    ((LinkedList<CommonMessage>) resList).addLast(commonMessage);
+                    count++;
+                }
+            }
         }
-        Collections.reverse(list);
-        for (CommonMessage commonMessage : list){
+        List<CommonMessage> list = null;
+        if (count < 20){
+            lock.readLock().lock();
+            list = messageMapper.getRecentMessageList(fromUser,toUser,20-count);
+            lock.readLock().unlock();
+
+        }
+        if (!list.isEmpty()){
+            resList.addAll(list);
+        }
+        if (resList.isEmpty()){
+            channel.writeAndFlush(new Message(new CommonMessage("系统消息",getUserName(channel),"没有与对方的聊天记录哦")));
+            return;
+        }
+        Collections.reverse(resList);
+        for (CommonMessage commonMessage : resList){
             Message msg = new Message(null);
             msg.setMsg(commonMessage);
             log.info(msg.toString());
@@ -225,12 +260,14 @@ public class DefaultMessageHandler implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-        scheduledExecutorService.scheduleAtFixedRate(() -> {
-            List<CommonMessage> ls = redisService.getCacheList(DefaultMessageHandler.msgKey);
+        scheduledExecutorService.scheduleWithFixedDelay(() -> {
+            lock.writeLock().lock();
+            List<CommonMessage> ls = redisService.getEarlyCacheList(DefaultMessageHandler.msgKey);
             Collections.reverse(ls);
             if (!ls.isEmpty()){
                 messageMapper.insertMessages(ls);
             }
+            lock.writeLock().unlock();
         },0,2, TimeUnit.SECONDS);
 
     }
